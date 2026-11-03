@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Database 4K R50 W50 (10 min)
+Comment=Destructive fio test on /dev/sda; requires explicit confirmation
+Exec=/usr/local/bin/fio-db-r50-w50.sh
+Terminal=true
+Icon=utilities-terminal
+Categories=System;Utility;
