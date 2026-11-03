@@ -8,6 +8,17 @@ required = [
     'usr/bin/scim',
     'usr/local/bin/kiosk-session',
     'usr/local/sbin/kiosk-network',
+    'usr/local/bin/fio',
+    'usr/local/bin/fio-database-benchmark',
+    'usr/local/share/kiosk/desktop/Database-IO-10min.sh',
+    'usr/local/share/kiosk/desktop/Database-IO-10min.desktop',
+    'usr/local/share/kiosk/scim/global',
+    'usr/local/share/kiosk/scim/config',
+    'etc/firefox/policies/policies.json',
+    'usr/bin/wmctrl',
+    'usr/bin/lxpanel',
+    'usr/bin/pcmanfm',
+    'usr/bin/lxterminal',
 ]
 missing = [name for name in required if not (root / name).exists()]
 patterns = [
@@ -46,4 +57,4 @@ else:
 
 if missing:
     raise SystemExit('Missing runtime requirements:\n' + '\n'.join(missing))
-print('SCIM ZhuYin and runtime file requirements passed')
+print('SCIM ZhuYin, desktop, Firefox first-run policy and fio files passed')
