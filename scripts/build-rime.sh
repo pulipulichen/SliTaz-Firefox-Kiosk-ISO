@@ -16,7 +16,7 @@ cmake_build() {
     cmake --build "$src/build" --parallel "$CMAKE_BUILD_PARALLEL_LEVEL"
     cmake --install "$src/build"
 }
-cmake_build yaml-cpp -DYAML_CPP_BUILD_TESTS=OFF -DYAML_CPP_BUILD_TOOLS=OFF -DBUILD_SHARED_LIBS=ON
+cmake_build yaml-cpp -DYAML_CPP_BUILD_TESTS=OFF -DYAML_CPP_BUILD_TOOLS=OFF -DYAML_BUILD_SHARED_LIBS=ON
 cmake_build leveldb -DLEVELDB_BUILD_TESTS=OFF -DLEVELDB_BUILD_BENCHMARKS=OFF -DBUILD_SHARED_LIBS=ON
 # The upstream MARISA 0.2.6 tarball contains Autotools files but no
 # CMakeLists.txt; use our minimal recipe to avoid unavailable automake packages.
