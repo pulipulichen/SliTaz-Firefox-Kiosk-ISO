@@ -8,7 +8,15 @@
 - 這是狀態快照。後續 session 開始時，先重新讀取 main 與最新 Actions 結果，再依本文定位已嘗試的方案。
 - 本次（2026-11-03 文件整理時）的要求是補上紀錄；上一輪僅分析可行性。系統化依賴修復或更換發行版仍待後續指示，不能把本文的建議誤認為已實作。
 
-## 接手摘要
+## 2026-11-03 第 20～23 輪更新
+
+目前可下載 [第 23 輪 ISO 預發行版](https://github.com/pulipulichen/SliTaz-Firefox-Kiosk-ISO/releases/tag/build-23-1)。以下前期紀錄中的 RIME 方案已由 SCIM 注音表取代。
+
+- 第 20 輪的 6.12.89-slitaz rootfs 有 virtio_net，但沒有 virtio_pci 模組或內建證據。第 21 輪嘗試從三個鏡像保留原核心並補同版本模組，下載均回傳 404。
+- 第 22 輪由同一份 cooking 索引更新 linux-lts、已安裝的核心分包與 VirtIO 提供套件，並將對應開機核心放入光碟。6.12.115-slitaz 的 virtio_pci 和 virtio_net 已通過 depmod、modprobe 相依解析。SCIM、注音表及中文字型檔案檢查通過。此輪在整棵目錄覆寫後重播 GRUB 開機資訊時失敗。
+- [第 23 輪](https://github.com/pulipulichen/SliTaz-Firefox-Kiosk-ISO/actions/runs/41665277327) 僅替換核心、rootfs、GRUB 設定和 md5sum，成功保留 BIOS 與 UEFI 開機項目並發布 ISO。尚待 PVE 實機驗證 DHCP、Firefox 與 Ctrl+Space 注音輸入。
+
+## 接手摘要（第 15 輪歷史快照）
 
 目前保留 GitHub Actions 與 SliTaz 方案。已完成 RIME 核心編譯的證據來自第 14 輪；該輪在 ibus-rime 的 GLib/GObject 開發依賴檢查停止。最新程式已加入 glib-dev，但第 15 輪在最後查詢時仍執行中。已查閱的第 1～14 輪皆失敗，不能宣稱已有可用 ISO 或已完成 PVE 驗收。
 
