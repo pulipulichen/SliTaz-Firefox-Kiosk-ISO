@@ -34,9 +34,18 @@ install_packages() {
     for package in "$@"; do
         chroot "$target" /usr/bin/tazpkg get-install "$package" --forced
         # Some old tazpkg releases return success after a failed download.
+        if [[ ! -d "$target/var/lib/tazpkg/installed/$package" ]]; then
+            # The cooking mirror can publish its package index before the
+            # corresponding archive has finished syncing. Retry that package
+            # from an independent mirror without changing the package list.
+            echo "Retrying $package from the Clarkson SliTaz mirror." >&2
+            printf '%s\\n' 'https://mirror.clarkson.edu/slitaz/x86_64/cooking/packages/' > "$target/var/lib/tazpkg/mirror"
+            chroot "$target" /usr/bin/tazpkg get-install "$package" --forced
+        fi
         [[ -d "$target/var/lib/tazpkg/installed/$package" ]] || {
-            echo "Package installation failed: $package" >&2; exit 1;
+            echo "Package installation failed from all configured mirrors: $package" >&2; exit 1;
         }
+        printf '%s\\n' 'https://mirror.slitaz.org/x86_64/cooking/packages/' > "$target/var/lib/tazpkg/mirror"
     done
 }
 # Never delete a root still containing mounts from an interrupted build.
