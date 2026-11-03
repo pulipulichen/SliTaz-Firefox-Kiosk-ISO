@@ -20,9 +20,9 @@ jobs:
       - name: Validate scripts
         run: |
           bash -n scripts/build.sh
-          sh -n scripts/build-rime.sh scripts/kiosk-session scripts/kiosk-network
-          python3 -m py_compile scripts/fetch-sources.py scripts/verify-rootfs.py scripts/kiosk-ibus.py
-          shellcheck -S error scripts/build.sh scripts/build-rime.sh scripts/kiosk-session scripts/kiosk-network
+          sh -n scripts/kiosk-session scripts/kiosk-network
+          python3 -m py_compile scripts/fetch-sources.py scripts/verify-rootfs.py
+          shellcheck -S error scripts/build.sh scripts/kiosk-session scripts/kiosk-network
       - name: Build ISO
         run: sudo bash scripts/build.sh
       - name: Publish ISO and corresponding sources

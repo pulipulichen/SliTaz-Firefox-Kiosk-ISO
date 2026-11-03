@@ -240,3 +240,13 @@ The following required packages were not found:
 ## 本次文件整理範圍
 
 2026-11-03：回查 main 的提交差異，以及第 1～14 輪失敗日誌，整理以上紀錄並查詢第 15 輪狀態。本次只新增本文件，未實作上述待處理建議，也未觸發建置重跑。文件依現有工作流程的 Markdown paths-ignore 設定，不屬於 push 自動建置的觸發範圍。
+
+### 2026-11-03 23:07 後 — 放棄 RIME 自行編譯，改用 SliTaz 現成 SCIM ZhuYin 套件
+
+- 證據：第 16 輪 [Actions #41658979577](https://github.com/pulipulichen/SliTaz-Firefox-Kiosk-ISO/actions/runs/41658979577)（commit `2806728`）已成功編譯 librime 1.8.5，卻在 ibus-rime CMake 因 `gdk-pixbuf-2.0` 間接依賴缺失失敗。當輪安裝 `libnotify-dev` 時，`gdk-pixbuf-dev` 與 `dbus-glib-dev` 下載失敗，但主套件仍被登記已安裝，導致編譯後段才發現不完整。
+- 使用者決定：不再堅持 RIME；優先選能直接安裝、可輸入繁體中文注音的套件。
+- 來源查核：SliTaz x86_64 cooking 套件庫列有 `scim`、`scim-tables-base`、`scim-tables-zh`；SCIM 的 `scim-tables-zh` 包含 ZhuYin／ZhuYin-Big 碼表。
+- 修改：移除 RIME 自行編譯步驟、來源鎖定與相關設定腳本，改成直接安裝 SCIM/ZhuYin；Firefox 使用 SCIM XIM frontend，保留 Ctrl+Space 及中文顯示；更新說明、授權資訊與驗證條件。
+- 根因對應：原本 `install_packages()` 只檢查直接要求的套件，並未追蹤出現在安裝日誌中的 `Missing package`。改成排程處理這些間接依賴，盡可能用 runner 端 curl 從鏡像取得精確套件檔，並檢查每個發現的套件是否已登記安裝；SCIM table engine、ZhuYin 碼表、VirtIO 與字型也加入發佈前檢查。
+- 驗證狀態：這是來源碼修改；**仍需 GitHub Actions 確認建置結果與 PVE 內 Firefox 實際注音輸入測試**。不把套件庫中存在套件當成整體已可正常運作。
+- 重要限制：SCIM 傳統 ZhuYin 是碼表輸入，非新酷音或 RIME 智慧選字；開機後首次可能仍需在 SCIM 選單挑選 ZhuYin。SliTaz cooking 套件與二進位套件取得仍可能異動。
