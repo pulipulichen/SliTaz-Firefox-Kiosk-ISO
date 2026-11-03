@@ -3,14 +3,39 @@ set -eu
 . /etc/kiosk.conf
 export GTK_IM_MODULE=xim QT_IM_MODULE=xim XMODIFIERS=@im=SCIM
 export NO_AT_BRIDGE=1
-mkdir -p "$HOME/.scim" "$HOME/.mozilla/firefox/kiosk"
+# Prefer the Traditional Chinese SCIM default while keeping English desktop labels.
+export LC_CTYPE=zh_TW.UTF-8
 if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
     exec dbus-launch --exit-with-session /usr/local/bin/kiosk-session
 fi
+
+# /etc/skel is not necessarily copied into the pre-existing Live user (tux).
+profile="$HOME/.mozilla/firefox/kiosk"
+mkdir -p "$profile" "$HOME/.scim" "$HOME/Desktop"
+if [ -f /usr/local/share/kiosk/firefox/user.js ]; then
+    cp /usr/local/share/kiosk/firefox/user.js "$profile/user.js"
+fi
+# Keep the homepage synchronized with the editable kiosk.conf.
+printf 'user_pref("browser.startup.homepage", "%s");\n' "$START_URL" >> "$profile/user.js"
+for name in global config; do
+    [ -e "$HOME/.scim/$name" ] || cp "/usr/local/share/kiosk/scim/$name" "$HOME/.scim/$name"
+done
+for file in /usr/local/share/kiosk/desktop/*; do
+    [ -f "$file" ] || continue
+    [ -e "$HOME/Desktop/${file##*/}" ] || cp "$file" "$HOME/Desktop/"
+done
+chmod +x "$HOME/Desktop/Database-IO-10min.sh" 2>/dev/null || true
+
 xset s off 2>/dev/null || true
 xset -dpms 2>/dev/null || true
 openbox &
-# XIM works even if the SliTaz package lacks a matching GTK3 SCIM plugin.
+# Keep the normal SliTaz desktop, taskbar, icons and network/settings access.
+if command -v pcmanfm >/dev/null 2>&1; then
+    pcmanfm --desktop --profile LXDE >"$HOME/desktop.log" 2>&1 &
+fi
+if command -v lxpanel >/dev/null 2>&1; then
+    lxpanel --profile LXDE >"$HOME/lxpanel.log" 2>&1 &
+fi
 scim -c simple -e table -f x11 --no-socket -d >"$HOME/scim-setup.log" 2>&1
 sleep 1
 count=0
@@ -25,8 +50,26 @@ if [ "$BROWSER_MODE" = kiosk ]; then
 else
     set -- --new-window
 fi
-# Restart after closing the window; configuration and browsing stay in RAM.
+
+# Reopen after a close without taking the user out of the desktop.
 while :; do
-    "$firefox_bin" --no-remote --profile "$HOME/.mozilla/firefox/kiosk" "$@" "$START_URL" || true
+    "$firefox_bin" --no-remote --profile "$profile" "$@" "$START_URL" &
+    firefox_pid=$!
+    if [ "$BROWSER_MODE" != kiosk ]; then
+        (
+            tries=0
+            while [ "$tries" -lt 50 ] && kill -0 "$firefox_pid" 2>/dev/null; do
+                # Maximize only the Firefox window; never use exclusive kiosk mode.
+                win_id=$(wmctrl -lx 2>/dev/null | awk 'tolower($0) ~ /firefox/ {print $1; exit}')
+                if [ -n "$win_id" ]; then
+                    wmctrl -i -r "$win_id" -b add,maximized_vert,maximized_horz || true
+                    break
+                fi
+                tries=$((tries + 1))
+                sleep 1
+            done
+        ) &
+    fi
+    wait "$firefox_pid" || true
     sleep 2
 done
