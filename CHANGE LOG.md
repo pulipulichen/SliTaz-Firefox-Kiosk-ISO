@@ -8,6 +8,18 @@
 - 這是狀態快照。後續 session 開始時，先重新讀取 main 與最新 Actions 結果，再依本文定位已嘗試的方案。
 - 本次（2026-11-03 文件整理時）的要求是補上紀錄；上一輪僅分析可行性。系統化依賴修復或更換發行版仍待後續指示，不能把本文的建議誤認為已實作。
 
+## 2026-11-04 — 以 Red Hat 參考設定導入兩組專用磁碟 fio 工作負載
+
+- **需求與來源**：使用者決定以 Red Hat Ceph Storage Performance Benchmark 文件為實作參考，採 4K 隨機 I/O、Linux `libaio`、`direct=1`、`iodepth=32`、`numjobs=1`，對 PVE Live VM 的專用可清除磁碟 `/dev/sda` 進行 70%讀/30%寫、50%讀/50%寫兩種測試。兩組各暖機 60 秒、正式測試 600 秒；這是參考 Red Hat 選項的*自訂混合 I/O*，不是 Red Hat 的官方標準資料庫配置。
+- **背景**：前一版 `fio-database-benchmark` 僅在 RAM-backed 普通檔案上執行 8 KiB `sync`、`direct=0`、750 IOPS 限速，無法代表專用 VM 磁碟的裸區塊 I/O；先前 `build-fio.sh` 直接透過 Ubuntu `musl-gcc` 建置，未明確提供 `libaio-dev`，不能保證具備 `libaio` engine。前一版本 `.github/workflows/build.yml` 亦有字面 `\\n` 導致驗證命令出錯的風險。
+- **程式修改**：新增 `scripts/fio-db-runner` 共用引擎，及 `scripts/fio-db-r70-w30.sh`、`scripts/fio-db-r50-w50.sh`；新增 `config/Database-IO-R70-W30.desktop` 與 `config/Database-IO-R50-W50.desktop`，修改 `scripts/build.sh` 將這些檔案安裝進 rootfs，並調整 `scripts/kiosk-session` 桌面複製動作。舊的 RAM 測試檔仍保留在原始碼，**不再包進 ISO**。
+- **安全防護**：不得開機自動測試。啟動腳本先要求 root/su，核對 `/dev/sda` 為 block device、容量至少 1 GiB、非唯讀、沒有任何本機與子分割區掛載、沒有 kernel holders／Swap，並以互動式終端機要求輸入 `ERASE /dev/sda`。無人值守／未輸入正確字串時拒絕執行。這些檢查不代表磁碟資料安全，仍需操作者確認專用硬碟。使用 `/tmp/fio-results/` 保存測試報告（Live ISO 關機後不保留）。
+- **編譯方式**：修改 `scripts/build-fio.sh`，在 GitHub Actions 的 Ubuntu runner 中啟動 Alpine 3.20 容器，安裝 `libaio-dev`、`linux-headers` 及 build-base，以 musl 靜態編譯 fio 3.35（來源提交 `5a649e2dddc4d8ad163b0cf57f7cea00a2e94a33`）。檢查 configure `Linux AIO support yes`、`fio --enghelp=libaio`、執行 4 MiB 安全測試檔的 libaio smoke test，並在 SliTaz chroot 中再次檢查版本與 engine。任何檢查失敗則禁止發布 ISO。
+- **CI**：調整 `.github/workflows/build.yml` ShellCheck/語法檢查清單；修正錯誤跳脫換行；設定 `cancel-in-progress: true` 避免連續提交建立多個過時的 ISO 發行版。
+- **文件**：同步更新 `README.md`、`RELEASE_NOTES.md` 與 `scripts/verify-rootfs.py`。說明這不符合完整 SNIA preconditioning/steady-state 測試，結果應與同條件測試比較。
+- **提交與驗證**：修改已直接提交 `main`。截至本文撰寫，**尚未取得本次新 Actions 成功建置及 PVE 實機測試證據，不得宣稱新版 ISO 已發布或硬碟 I/O 已驗證**。最新狀態請查 [GitHub Actions](https://github.com/pulipulichen/SliTaz-Firefox-Kiosk-ISO/actions/workflows/build.yml) 與 [Releases](https://github.com/pulipulichen/SliTaz-Firefox-Kiosk-ISO/releases)。
+- **必要後續驗證**：GitHub Actions Validate scripts、Alpine libaio 編譯、chroot 執行、rootfs 驗證、xorriso BIOS/UEFI 封裝、release asset；PVE 確認 `/dev/sda` 身分與是否空磁碟，測試兩個模式各 660 秒，觀察 IOPS / bandwidth / latency，並確保 Firefox、桌面與注音沒有回歸。
+
 ## 2026-11-03 第 20～23 輪更新
 
 目前可下載 [第 23 輪 ISO 預發行版](https://github.com/pulipulichen/SliTaz-Firefox-Kiosk-ISO/releases/tag/build-23-1)。以下前期紀錄中的 RIME 方案已由 SCIM 注音表取代。
