@@ -178,7 +178,7 @@ for workload in r70-w30 r50-w50; do
     install -Dm755 "scripts/fio-db-$workload.sh" "$root/usr/local/share/kiosk/desktop/fio-db-$workload.sh"
 done
 for profile in R70-W30 R50-W50; do
-    install -Dm644 "config/Database-IO-$profile.desktop" "$root/etc/skel/Desktop/Database-IO-$profile.desktop"
+    install -Dm755 "config/Database-IO-$profile.desktop" "$root/etc/skel/Desktop/Database-IO-$profile.desktop"
     install -Dm644 "config/Database-IO-$profile.desktop" "$root/usr/local/share/kiosk/desktop/Database-IO-$profile.desktop"
 done
 mkdir -p "$root/usr/share/xsessions"
