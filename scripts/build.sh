@@ -114,7 +114,9 @@ xorriso -osirrox on -indev "$iso" -extract / "$cdtree"
 (cd "$root"; xz --format=lzma -dc "$cdtree/boot/rootfs.gz" | cpio -idm --no-absolute-filenames)
 bind_root "$root"
 # SCIM's existing ZhuYin tables avoid the entire RIME source-build toolchain.
-install_packages "$root" scim scim-tables-base scim-tables-zh wqy-microhei
+install_packages "$root" scim scim-tables-base scim-tables-zh wqy-microhei pcmanfm lxpanel lxterminal wmctrl
+# Building fio on Ubuntu against musl avoids introducing GCC into the Live ISO.
+bash scripts/build-fio.sh "$root" "$work"
 # Cooking retires old module archives. Refresh the boot kernel and all of
 # its installed split packages together, including the VirtIO PCI provider.
 index="$root/var/lib/tazpkg/files-list.lzma"
@@ -151,7 +153,27 @@ mounts=()
 install -Dm644 config/kiosk.conf "$root/etc/kiosk.conf"
 install -Dm755 scripts/kiosk-session "$root/usr/local/bin/kiosk-session"
 install -Dm755 scripts/kiosk-network "$root/usr/local/sbin/kiosk-network"
+# Store Firefox and SCIM settings both in /etc/skel and a runtime source for
+# the existing SliTaz tux user, whose home may predate /etc/skel changes.
 install -Dm644 config/user.js "$root/etc/skel/.mozilla/firefox/kiosk/user.js"
+install -Dm644 config/user.js "$root/usr/local/share/kiosk/firefox/user.js"
+install -Dm644 config/scim-global "$root/etc/skel/.scim/global"
+install -Dm644 config/scim-config "$root/etc/skel/.scim/config"
+install -Dm644 config/scim-global "$root/usr/local/share/kiosk/scim/global"
+install -Dm644 config/scim-config "$root/usr/local/share/kiosk/scim/config"
+# Firefox supports /etc/firefox/policies and also app/distribution/policies.json.
+install -Dm644 config/firefox-policies.json "$root/etc/firefox/policies/policies.json"
+while IFS= read -r -d '' app_ini; do
+    browser_dir=${app_ini%/application.ini}
+    case "$browser_dir" in
+        *firefox*) install -Dm644 config/firefox-policies.json "$browser_dir/distribution/policies.json" ;;
+    esac
+done < <(find "$root/usr/lib" "$root/opt" -name application.ini -print0 2>/dev/null)
+install -Dm755 scripts/fio-database-benchmark "$root/usr/local/bin/fio-database-benchmark"
+install -Dm755 scripts/fio-database-benchmark "$root/usr/local/share/kiosk/desktop/Database-IO-10min.sh"
+install -Dm755 config/Database-IO-10min.desktop "$root/usr/local/share/kiosk/desktop/Database-IO-10min.desktop"
+install -Dm755 scripts/fio-database-benchmark "$root/etc/skel/Desktop/Database-IO-10min.sh"
+install -Dm755 config/Database-IO-10min.desktop "$root/etc/skel/Desktop/Database-IO-10min.desktop"
 mkdir -p "$root/usr/share/xsessions"
 cat > "$root/usr/share/xsessions/kiosk.desktop" <<'EOF'
 [Desktop Entry]
@@ -173,7 +195,7 @@ search --no-floppy --file --set=root /boot/bzImage
 if [ "$grub_platform" = pc ]; then
   set gfxpayload=1024x768x16,800x600x16,auto
 fi
-menuentry "SliTaz Firefox (DHCP / SCIM ZhuYin)" {
+menuentry "SliTaz Firefox Desktop (DHCP / SCIM ZhuYin)" {
   linux /boot/bzImage rw root=/dev/null autologin lang=en_US.UTF-8 kmap=us tz=Asia/Taipei
   initrd /boot/rootfs.gz
 }
