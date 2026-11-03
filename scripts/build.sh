@@ -195,6 +195,15 @@ cp "$root/var/lib/tazpkg/installed.info" "$dist/packages.tsv"
 output="$dist/slitaz-firefox-kiosk-x86_64.iso"
 rm -f "$output"
 # Replay the upstream hybrid BIOS/UEFI boot equipment rather than inventing it.
-xorriso -indev "$iso" -outdev "$output" -map "$cdtree" / -boot_image any replay
+maps=()
+for path in boot/bzImage boot/rootfs.gz boot/grub/grub.cfg md5sum; do
+    maps+=(-map "$cdtree/$path" "/$path")
+done
+xorriso -indev "$iso" -outdev "$output" "${maps[@]}" -boot_image any replay
+boot_report=$(xorriso -indev "$output" -report_el_torito plain)
+printf '%s\n' "$boot_report"
+for platform in BIOS UEFI; do
+    grep -Eq "El Torito boot img .* $platform +y " <<< "$boot_report"
+done
 (cd "$dist"; sha256sum *.iso sources.lock.json packages.tsv runtime-libraries.txt > SHA256SUMS)
 echo "ISO built: $output"
