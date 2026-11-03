@@ -24,7 +24,10 @@ for file in /usr/local/share/kiosk/desktop/*; do
     [ -f "$file" ] || continue
     [ -e "$HOME/Desktop/${file##*/}" ] || cp "$file" "$HOME/Desktop/"
 done
-chmod +x "$HOME/Desktop/Database-IO-10min.sh" 2>/dev/null || true
+for script in "$HOME"/Desktop/fio-db-*.sh; do
+    [ -f "$script" ] || continue
+    chmod +x "$script" 2>/dev/null || true
+done
 
 xset s off 2>/dev/null || true
 xset -dpms 2>/dev/null || true
