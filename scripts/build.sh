@@ -104,11 +104,10 @@ install_packages() {
     printf 'Verified %d explicitly requested and discovered packages.\n' "${#processed[@]}"
 }
 # Never delete a root still containing mounts from an interrupted build.
-for target in "$root"; do
-    if findmnt -rn -o TARGET | grep -Fq "$target/"; then
-        echo "Stale mounts below $target: unmount them before rebuilding." >&2; exit 1
-    fi
-done
+if findmnt -rn -o TARGET | grep -Fq "$root/"; then
+    echo "Stale mounts below $root: unmount them before rebuilding." >&2
+    exit 1
+fi
 rm -rf "$root" "$cdtree"
 mkdir -p "$root" "$cdtree"
 xorriso -osirrox on -indev "$iso" -extract / "$cdtree"

@@ -250,3 +250,10 @@ The following required packages were not found:
 - 根因對應：原本 `install_packages()` 只檢查直接要求的套件，並未追蹤出現在安裝日誌中的 `Missing package`。改成排程處理這些間接依賴，盡可能用 runner 端 curl 從鏡像取得精確套件檔，並檢查每個發現的套件是否已登記安裝；SCIM table engine、ZhuYin 碼表、VirtIO 與字型也加入發佈前檢查。
 - 驗證狀態：這是來源碼修改；**仍需 GitHub Actions 確認建置結果與 PVE 內 Firefox 實際注音輸入測試**。不把套件庫中存在套件當成整體已可正常運作。
 - 重要限制：SCIM 傳統 ZhuYin 是碼表輸入，非新酷音或 RIME 智慧選字；開機後首次可能仍需在 SCIM 選單挑選 ZhuYin。SliTaz cooking 套件與二進位套件取得仍可能異動。
+
+### 2026-11-03 23:17 後 — 首次 SCIM 版工作流程靜態檢查修正
+
+- 前一版 commit：[`8ab8dc7`](https://github.com/pulipulichen/SliTaz-Firefox-Kiosk-ISO/commit/8ab8dc705847baa57946b2ce36007d748a1ab148)；[Actions #41662333608](https://github.com/pulipulichen/SliTaz-Firefox-Kiosk-ISO/actions/runs/41662333608)。
+- 結果：`Validate scripts` 失敗，ShellCheck SC2066 指向 `for target in "$root"; do`，因只有單一 root，應改成直接判斷 mount，這輪尚未進入 Build ISO。
+- 修改：以單次 `if findmnt ... | grep` 取代一元素 for 迴圈；不改變防止殘留掛載被刪除的目的。
+- 待驗證：下一輪 Actions 靜態檢查、SliTaz 套件安裝、SCIM table/runtime 與 ISO 封裝。
