@@ -1,0 +1,8 @@
+# SCIM global settings. ZhuYin (traditional Bopomofo) from scim-tables-zh.
+# UUID from scim-im/scim-tables tables/zh/ZhuYin.txt.in.
+/SupportedUnicodeLocales = en_US.UTF-8,zh_TW.UTF-8
+/DefaultPanelProgram = scim-panel-gtk
+/DefaultConfigModule = simple
+/DefaultIMEngineFactory/en_US = a93845cd-6e00-44fc-8928-22d2590bbb61
+/DefaultIMEngineFactory/zh_TW = a93845cd-6e00-44fc-8928-22d2590bbb61
+/DefaultIMEngineFactory/zh_HK = a93845cd-6e00-44fc-8928-22d2590bbb61
