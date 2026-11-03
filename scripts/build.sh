@@ -38,8 +38,8 @@ install_packages() {
             # The cooking mirror can publish its package index before the
             # corresponding archive has finished syncing. Retry that package
             # from an independent mirror without changing the package list.
-            echo "Retrying $package from the Clarkson SliTaz mirror." >&2
-            printf '%s\n' 'https://mirror.clarkson.edu/slitaz/x86_64/cooking/packages/' > "$target/var/lib/tazpkg/mirror"
+            echo "Retrying $package from the Ibiblio SliTaz mirror." >&2
+            printf '%s\n' 'https://distro.ibiblio.org/slitaz/x86_64/cooking/packages/' > "$target/var/lib/tazpkg/mirror"
             chroot "$target" /usr/bin/tazpkg get-install "$package" --forced
         fi
         [[ -d "$target/var/lib/tazpkg/installed/$package" ]] || {
