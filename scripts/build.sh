@@ -87,7 +87,7 @@ cp -a "$root" "$builder"
 bind_root "$builder"
 # MARISA is built with our CMake recipe; the cooking mirror's automake archive is missing.
 install_packages "$builder" gcc make cmake3 pkg-config linux-api-headers \
-    glibc-dev libboost-dev libboost-signals-dev libboost-date-time-dev libboost-math-dev libboost-iostreams-dev libboost-filesystem-dev libboost-regex-dev \
+    glibc-dev glib-dev libboost-dev libboost-signals-dev libboost-date-time-dev libboost-math-dev libboost-iostreams-dev libboost-filesystem-dev libboost-regex-dev \
     libboost-system-dev opencc-dev ibus-dev libnotify-dev gtk+-dev gtk+3-dev
 cp -a "$work/downloads/sources" "$builder/sources"
 install -m755 scripts/build-rime.sh "$builder/build-rime.sh"
