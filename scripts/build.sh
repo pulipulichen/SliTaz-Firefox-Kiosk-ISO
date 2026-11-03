@@ -169,15 +169,22 @@ while IFS= read -r -d '' app_ini; do
         *firefox*) install -Dm644 config/firefox-policies.json "$browser_dir/distribution/policies.json" ;;
     esac
 done < <(find "$root/usr/lib" "$root/opt" -name application.ini -print0 2>/dev/null)
-install -Dm755 scripts/fio-database-benchmark "$root/usr/local/bin/fio-database-benchmark"
-install -Dm755 scripts/fio-database-benchmark "$root/usr/local/share/kiosk/desktop/Database-IO-10min.sh"
-install -Dm755 config/Database-IO-10min.desktop "$root/usr/local/share/kiosk/desktop/Database-IO-10min.desktop"
-install -Dm755 scripts/fio-database-benchmark "$root/etc/skel/Desktop/Database-IO-10min.sh"
-install -Dm755 config/Database-IO-10min.desktop "$root/etc/skel/Desktop/Database-IO-10min.desktop"
+# Explicitly launched raw-disk tests only (never autorun). Keep separate
+# profiles but share identical device checks and workload parameters.
+install -Dm755 scripts/fio-db-runner "$root/usr/local/bin/fio-db-runner"
+for workload in r70-w30 r50-w50; do
+    install -Dm755 "scripts/fio-db-$workload.sh" "$root/usr/local/bin/fio-db-$workload.sh"
+    install -Dm755 "scripts/fio-db-$workload.sh" "$root/etc/skel/Desktop/fio-db-$workload.sh"
+    install -Dm755 "scripts/fio-db-$workload.sh" "$root/usr/local/share/kiosk/desktop/fio-db-$workload.sh"
+done
+for profile in R70-W30 R50-W50; do
+    install -Dm644 "config/Database-IO-$profile.desktop" "$root/etc/skel/Desktop/Database-IO-$profile.desktop"
+    install -Dm644 "config/Database-IO-$profile.desktop" "$root/usr/local/share/kiosk/desktop/Database-IO-$profile.desktop"
+done
 mkdir -p "$root/usr/share/xsessions"
 cat > "$root/usr/share/xsessions/kiosk.desktop" <<'EOF'
 [Desktop Entry]
-Name=Firefox Kiosk
+Name=Firefox Desktop
 Type=Application
 Exec=/usr/local/bin/kiosk-session
 EOF
