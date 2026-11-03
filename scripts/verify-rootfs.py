@@ -9,9 +9,13 @@ required = [
     'usr/local/bin/kiosk-session',
     'usr/local/sbin/kiosk-network',
     'usr/local/bin/fio',
-    'usr/local/bin/fio-database-benchmark',
-    'usr/local/share/kiosk/desktop/Database-IO-10min.sh',
-    'usr/local/share/kiosk/desktop/Database-IO-10min.desktop',
+    'usr/local/bin/fio-db-runner',
+    'usr/local/bin/fio-db-r70-w30.sh',
+    'usr/local/bin/fio-db-r50-w50.sh',
+    'usr/local/share/kiosk/desktop/Database-IO-R70-W30.desktop',
+    'usr/local/share/kiosk/desktop/Database-IO-R50-W50.desktop',
+    'usr/local/share/kiosk/desktop/fio-db-r70-w30.sh',
+    'usr/local/share/kiosk/desktop/fio-db-r50-w50.sh',
     'usr/local/share/kiosk/scim/global',
     'usr/local/share/kiosk/scim/config',
     'etc/firefox/policies/policies.json',
@@ -57,4 +61,4 @@ else:
 
 if missing:
     raise SystemExit('Missing runtime requirements:\n' + '\n'.join(missing))
-print('SCIM ZhuYin, desktop, Firefox first-run policy and fio files passed')
+print('SCIM ZhuYin, desktop, Firefox policy and 4K fio profile files passed')
