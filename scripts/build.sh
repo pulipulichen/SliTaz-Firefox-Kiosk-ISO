@@ -86,12 +86,10 @@ mounts=()
 cp -a "$root" "$builder"
 bind_root "$builder"
 # MARISA is built with our CMake recipe; the cooking mirror's automake archive is missing.
-install_packages "$builder" gcc make cmake3 \
+install_packages "$builder" gcc make cmake3 pkg-config \
     glibc-dev libboost-dev libboost-filesystem-dev libboost-regex-dev \
     libboost-system-dev opencc-dev ibus-dev libnotify-dev gtk+-dev gtk+3-dev
 cp -a "$work/downloads/sources" "$builder/sources"
-# Build pkg-config from its hash-locked source; the SliTaz mirror's binary archive is stale.
-chroot "$builder" /bin/sh -c 'cd /sources/pkg-config && ./configure --with-internal-glib --prefix=/usr --disable-host-tool && make -j2 && make install'
 install -m755 scripts/build-rime.sh "$builder/build-rime.sh"
 install -Dm644 scripts/marisa-cmake/CMakeLists.txt "$builder/marisa-cmake/CMakeLists.txt"
 chroot "$builder" /bin/sh /build-rime.sh
