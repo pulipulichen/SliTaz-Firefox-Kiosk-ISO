@@ -35,7 +35,7 @@ install_packages() {
         'https://ftp.icm.edu.pl/packages/linux-slitaz/x86_64/cooking/packages'
         'https://mirror.clarkson.edu/slitaz/x86_64/cooking/packages'
     )
-    printf '%s\n' 'https://mirror.slitaz.org/x86_64/cooking/packages/' > "$target/var/lib/tazpkg/mirror"
+    printf '%s\n' 'https://distro.ibiblio.org/slitaz/x86_64/cooking/packages/' > "$target/var/lib/tazpkg/mirror"
     chroot "$target" /usr/bin/tazpkg recharge
     for package in "$@"; do
         install_log="$work/tazpkg-$package.log"
@@ -86,7 +86,7 @@ mounts=()
 cp -a "$root" "$builder"
 bind_root "$builder"
 # MARISA is built with our CMake recipe; the cooking mirror's automake archive is missing.
-install_packages "$builder" gcc make cmake3 pkg-config \
+install_packages "$builder" gcc make cmake3 pkg-config linux-api-headers \
     glibc-dev libboost-dev libboost-filesystem-dev libboost-regex-dev \
     libboost-system-dev opencc-dev ibus-dev libnotify-dev gtk+-dev gtk+3-dev
 cp -a "$work/downloads/sources" "$builder/sources"
