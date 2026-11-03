@@ -1,0 +1,134 @@
+#!/bin/sh
+# Destructive, explicitly confirmed random I/O test on a dedicated PVE disk.
+# Red Hat-inspired: 4K, Linux native AIO, direct I/O, queue depth 32, one job.
+set -eu
+if [ "$#" -ne 1 ]; then
+    echo 'Usage: fio-db-runner 70|50' >&2
+    exit 2
+fi
+case "$1" in
+    70|50) read_percent=$1 ;;
+    *) echo 'Read percentage must be 70 or 50' >&2; exit 2 ;;
+esac
+
+# Desktop launchers start as tux. Keep privilege escalation interactive.
+if [ "$(id -u)" -ne 0 ]; then
+    if ! command -v su >/dev/null 2>&1; then
+        echo 'Root access is required; run via su or sudo.' >&2
+        exit 1
+    fi
+    echo 'This test requires root privileges. Authenticate with su.'
+    exec su -c "/usr/local/bin/fio-db-runner $read_percent"
+fi
+
+disk=/dev/sda
+sysdisk=/sys/block/sda
+if [ ! -b "$disk" ] || [ ! -r "$sysdisk/size" ]; then
+    echo 'Refusing to test: /dev/sda is not a detected block disk.' >&2
+    echo 'If using VirtIO Block, the disk may be /dev/vda; use VirtIO SCSI for /dev/sda.' >&2
+    exit 1
+fi
+if [ ! -r /proc/self/mountinfo ] || [ ! -r /proc/swaps ]; then
+    echo 'Cannot check mount and swap safety state.' >&2
+    exit 1
+fi
+if [ "$(cat "$sysdisk/ro")" != 0 ]; then
+    echo '/dev/sda is read-only; refusing to run.' >&2
+    exit 1
+fi
+
+# Check actual kernel major:minor device numbers, not mount source names.
+# This also protects mounts by UUID / LABEL and partitions on /dev/sda.
+for node in "$sysdisk" "$sysdisk"/sda[0-9]*; do
+    [ -r "$node/dev" ] || continue
+    devno=$(cat "$node/dev")
+    if awk -v devno="$devno" '$3 == devno { found=1 } END { exit !found }' /proc/self/mountinfo; then
+        echo "Refusing to overwrite mounted device $node (major:minor $devno)." >&2
+        exit 1
+    fi
+    for holder in "$node"/holders/*; do
+        if [ -e "$holder" ]; then
+            echo "Refusing to overwrite device with active holder: $holder" >&2
+            exit 1
+        fi
+    done
+done
+if grep -Eq '^/dev/sda([0-9]+)?[[:space:]]' /proc/swaps; then
+    echo 'Refusing to overwrite a device or partition used for swap.' >&2
+    exit 1
+fi
+if ! command -v fio >/dev/null 2>&1; then
+    echo 'fio is missing from this ISO.' >&2
+    exit 1
+fi
+if ! fio --enghelp=libaio >/dev/null 2>&1; then
+    echo 'This fio binary does not support libaio; aborting (no engine fallback).' >&2
+    exit 1
+fi
+sectors=$(cat "$sysdisk/size")
+if [ "$sectors" -lt 2097152 ]; then
+    echo 'Refusing to test: disk must be at least 1 GiB.' >&2
+    exit 1
+fi
+gib=$((sectors / 2097152))
+write_percent=$((100 - read_percent))
+printf '\nDESTRUCTIVE DISK TEST\n'
+printf '  Device      : %s (approximately %s GiB)\n' "$disk" "$gib"
+printf '  Workload    : 4K random I/O, %s%% read / %s%% write\n' "$read_percent" "$write_percent"
+printf '  I/O engine  : libaio, direct=1, iodepth=32, numjobs=1\n'
+printf '  Timing      : 60 seconds ramp-up + 600 seconds measured\n'
+printf '  Address span: entire disk (100%%)\n'
+printf '  Side effects: ALL EXISTING DATA ON /dev/sda MAY BE DESTROYED.\n'
+printf '  Never run against a disk with valuable data.\n\n'
+if [ ! -t 0 ]; then
+    echo 'Interactive terminal required. Refusing unattended execution.' >&2
+    exit 1
+fi
+printf 'To proceed, type exactly ERASE /dev/sda : '
+IFS= read -r confirmation || exit 1
+if [ "$confirmation" != 'ERASE /dev/sda' ]; then
+    echo 'Cancelled: confirmation did not match.'
+    exit 1
+fi
+
+logdir=/tmp/fio-results
+mkdir -p "$logdir"
+stamp=$(date '+%Y%m%d-%H%M%S')
+log="$logdir/db-4k-r${read_percent}-w${write_percent}-$stamp.log"
+echo "Running fio. Detailed output will be saved to: $log"
+echo 'Results in /tmp are lost when the Live ISO reboots.'
+if fio \
+    --name="db-4k-r${read_percent}-w${write_percent}" \
+    --filename="$disk" \
+    --ioengine=libaio \
+    --direct=1 \
+    --rw=randrw \
+    --rwmixread="$read_percent" \
+    --bs=4k \
+    --iodepth=32 \
+    --numjobs=1 \
+    --size=100% \
+    --time_based=1 \
+    --ramp_time=60 \
+    --runtime=600 \
+    --randrepeat=0 \
+    --norandommap=1 \
+    --group_reporting=1 \
+    --clat_percentiles=1 \
+    --percentile_list=50:95:99:99.9 \
+    --output="$log"; then
+    status=0
+else
+    status=$?
+fi
+echo
+echo "fio exit code: $status"
+if [ -f "$log" ]; then
+    cat "$log"
+fi
+echo "Report saved to $log"
+if [ -t 0 ]; then
+    printf 'Press Enter to close... '
+    IFS= read -r unused || true
+fi
+exit "$status"
