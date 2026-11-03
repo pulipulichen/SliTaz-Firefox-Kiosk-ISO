@@ -34,18 +34,9 @@ install_packages() {
     for package in "$@"; do
         chroot "$target" /usr/bin/tazpkg get-install "$package" --forced
         # Some old tazpkg releases return success after a failed download.
-        if [[ ! -d "$target/var/lib/tazpkg/installed/$package" ]]; then
-            # The cooking mirror can publish its package index before the
-            # corresponding archive has finished syncing. Retry that package
-            # from an independent mirror without changing the package list.
-            echo "Retrying $package from the Ibiblio SliTaz mirror." >&2
-            printf '%s\n' 'https://distro.ibiblio.org/slitaz/x86_64/cooking/packages/' > "$target/var/lib/tazpkg/mirror"
-            chroot "$target" /usr/bin/tazpkg get-install "$package" --forced
-        fi
         [[ -d "$target/var/lib/tazpkg/installed/$package" ]] || {
-            echo "Package installation failed from all configured mirrors: $package" >&2; exit 1;
+            echo "Package installation failed: $package" >&2; exit 1;
         }
-        printf '%s\n' 'https://mirror.slitaz.org/x86_64/cooking/packages/' > "$target/var/lib/tazpkg/mirror"
     done
 }
 # Never delete a root still containing mounts from an interrupted build.
@@ -68,10 +59,12 @@ mounts=()
 cp -a "$root" "$builder"
 bind_root "$builder"
 # MARISA is built with our CMake recipe; the cooking mirror's automake archive is missing.
-install_packages "$builder" gcc make cmake3 pkg-config \
+install_packages "$builder" gcc make cmake3 \
     glibc-dev libboost-dev libboost-filesystem-dev libboost-regex-dev \
     libboost-system-dev opencc-dev ibus-dev libnotify-dev gtk+-dev gtk+3-dev
 cp -a "$work/downloads/sources" "$builder/sources"
+# Build pkg-config from its hash-locked source; the SliTaz mirror's binary archive is stale.
+chroot "$builder" /bin/sh -c 'cd /sources/pkg-config && ./configure --with-internal-glib --prefix=/usr --disable-host-tool && make -j2 && make install'
 install -m755 scripts/build-rime.sh "$builder/build-rime.sh"
 install -Dm644 scripts/marisa-cmake/CMakeLists.txt "$builder/marisa-cmake/CMakeLists.txt"
 chroot "$builder" /bin/sh /build-rime.sh

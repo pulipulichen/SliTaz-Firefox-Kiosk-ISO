@@ -35,6 +35,10 @@
     "url": "https://codeload.github.com/rime/rime-stroke/tar.gz/ea8576d1accd6fda339e96b415caadb56e2a07d1",
     "sha256": "6ff57556a7a047514911226db9dd244f9517912573826c0d20b21456b98202be"
   },
+  "pkg-config": {
+    "url": "https://pkgconfig.freedesktop.org/releases/pkg-config-0.29.2.tar.gz",
+    "sha256": "6fc69c01688c9458a57eb9a1664c9aba372ccda420a02bf4429fe610e7e7d591"
+  },
   "base-iso": {
     "url": "https://mirror.slitaz.org/x86_64/cooking/iso/slitaz-firefox-x86_64-cooking.iso",
     "sha256": "24488ec54229810148d8abf0d405e1dc1bb4a4334ea78602cba575a3fbe25a4d"
