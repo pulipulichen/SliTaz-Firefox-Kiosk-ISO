@@ -36,15 +36,18 @@ echo "Important   : A Live ISO's default home is RAM-backed."
 echo "              For storage benchmarks, pass a mounted filesystem directory."
 echo "No raw block devices will be written."
 echo
-fio --name=database-simulation \
+if fio --name=database-simulation \
     --filename="$testfile" \
     --rw=randrw --rwmixread=70 --bs=8k \
     --ioengine=sync --direct=0 --numjobs=1 \
     --size=128M --runtime=600 --time_based \
     --rate_iops=750 --fsync=50 \
     --randrepeat=0 --group_reporting=1 \
-    --output="$log"
-result=$?
+    --output="$log"; then
+    result=0
+else
+    result=$?
+fi
 echo
 echo "fio exit code: $result"
 echo "Results: $log"
