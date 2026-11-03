@@ -115,6 +115,45 @@ xorriso -osirrox on -indev "$iso" -extract / "$cdtree"
 bind_root "$root"
 # SCIM's existing ZhuYin tables avoid the entire RIME source-build toolchain.
 install_packages "$root" scim scim-tables-base scim-tables-zh wqy-microhei
+# The live ISO can omit PCI transport even though virtio_net is present.
+# Fetch only archives for the ISO kernel, never the rolling mirror's newest ABI.
+kernel_dirs=("$root"/lib/modules/*)
+[[ ${#kernel_dirs[@]} == 1 && -d ${kernel_dirs[0]} ]]
+release=${kernel_dirs[0]##*/}
+modules=${kernel_dirs[0]}
+if ! compgen -G "$modules/kernel/drivers/virtio/virtio_pci.ko*" >/dev/null &&
+   ! grep -qxF 'kernel/drivers/virtio/virtio_pci.ko' "$modules/modules.builtin" &&
+   ! grep -qsx 'CONFIG_VIRTIO_PCI=y' "$root/boot/config-$release"; then
+    # Consult the file index too: package splits can differ between builds.
+    owners=(linux-lts-virt)
+    index="$root/var/lib/tazpkg/files-list.lzma"
+    if [[ -f $index ]]; then
+        mapfile -t indexed < <(xz --format=lzma -dc "$index" |
+            awk -F: '/\/virtio_pci\.ko(\.(xz|gz|zst))?$/ && $1 ~ /^linux-lts(-[a-z0-9-]+)?$/ {print $1}' | sort -u)
+        owners+=("${indexed[@]}")
+    fi
+    stage=$(mktemp -d "$root/tmp/virtio.XXXXXX")
+    guest_stage=${stage#"$root"}
+    for owner in "${owners[@]}"; do
+        archive="$owner-${release%-slitaz}-x86_64.tazpkg"
+        for mirror in https://distro.ibiblio.org/slitaz https://mirror.clarkson.edu/slitaz https://ftp.icm.edu.pl/packages/linux-slitaz; do
+            curl -fLsS --retry 2 "$mirror/x86_64/cooking/packages/$archive" -o "$stage/$archive" || continue
+            chroot "$root" /bin/sh -c 'cd "$1" && tazpkg extract "$2"' sh "$guest_stage" "$archive"
+            payload=$(find "$stage" -type d -path "*/fs/lib/modules/$release/kernel/drivers/virtio" -print -quit)
+            if [[ -d $payload ]]; then
+                mkdir -p "$modules/kernel/drivers/virtio"
+                cp -a "$payload/." "$modules/kernel/drivers/virtio/"
+            fi
+            break
+        done
+        if compgen -G "$modules/kernel/drivers/virtio/virtio_pci.ko*" >/dev/null; then break; fi
+    done
+    rm -rf "$stage"
+fi
+depmod -b "$root" "$release"
+for driver in virtio_pci virtio_net; do
+    modprobe -d "$root" -S "$release" --show-depends "$driver"
+done
 cleanup
 mounts=()
 install -Dm644 config/kiosk.conf "$root/etc/kiosk.conf"
