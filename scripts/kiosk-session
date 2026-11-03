@@ -71,5 +71,9 @@ while :; do
         ) &
     fi
     wait "$firefox_pid" || true
+    if [ "$BROWSER_MODE" != kiosk ]; then
+        # Closing Firefox must not log out of the desktop session.
+        while :; do sleep 3600; done
+    fi
     sleep 2
 done
