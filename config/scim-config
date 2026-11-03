@@ -1,0 +1,10 @@
+# SCIM per-user preferences: Traditional Chinese ZhuYin, Ctrl+Space.
+/FrontEnd/OnTheSpot = true
+/FrontEnd/SharedInputMethod = true
+/FrontEnd/ChangeFactoryGlobally = true
+/FrontEnd/X11/ServerName = SCIM
+/Hotkeys/FrontEnd/Trigger = Control+space
+/Hotkeys/FrontEnd/ValidKeyMask = Shift+Control+Alt+Meta+QuirkKanaRo
+/DefaultIMEngineFactory/en_US = a93845cd-6e00-44fc-8928-22d2590bbb61
+/DefaultIMEngineFactory/zh_TW = a93845cd-6e00-44fc-8928-22d2590bbb61
+/IMEngine/RawCode/Locales = default
