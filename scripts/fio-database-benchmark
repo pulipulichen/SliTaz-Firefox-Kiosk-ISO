@@ -1,0 +1,56 @@
+#!/bin/sh
+# Ten-minute database-like mixed random I/O workload against REGULAR FILES ONLY.
+# Usage: fio-database-benchmark [directory-on-the-filesystem-to-test]
+set -eu
+TEST_DIR=${1:-"$HOME/fio-db-test"}
+case "$TEST_DIR" in
+    /dev|/dev/*|/proc|/proc/*|/sys|/sys/*)
+        echo "Refusing to run on device or kernel paths" >&2
+        exit 1 ;;
+esac
+mkdir -p "$TEST_DIR"
+TEST_DIR=$(cd "$TEST_DIR" && pwd -P)
+case "$TEST_DIR" in
+    /dev|/dev/*|/proc|/proc/*|/sys|/sys/*)
+        echo "Refusing to run on device or kernel paths" >&2
+        exit 1 ;;
+esac
+available_mb=$(df -Pm "$TEST_DIR" | awk 'END {print $4}')
+if [ "${available_mb:-0}" -lt 256 ]; then
+    echo "At least 256 MiB free is required for a 128 MiB test file." >&2
+    exit 1
+fi
+if ! command -v fio >/dev/null 2>&1; then
+    echo "fio is missing. Rebuild the ISO with bundled fio." >&2
+    exit 1
+fi
+mkdir -p "$HOME/fio-results"
+stamp=$(date +%Y%m%d-%H%M%S)
+log="$HOME/fio-results/database-io-$stamp.log"
+testfile="$TEST_DIR/db-benchmark.fio-data"
+echo "Database-like I/O benchmark (10 minutes)"
+echo "Target file : $testfile"
+echo "Result log  : $log"
+echo "Read/write  : 70%/30% random, 8 KiB blocks, capped at 750 IOPS"
+echo "Important   : A Live ISO's default home is RAM-backed."
+echo "              For storage benchmarks, pass a mounted filesystem directory."
+echo "No raw block devices will be written."
+echo
+fio --name=database-simulation \
+    --filename="$testfile" \
+    --rw=randrw --rwmixread=70 --bs=8k \
+    --ioengine=sync --direct=0 --numjobs=1 \
+    --size=128M --runtime=600 --time_based \
+    --rate_iops=750 --fsync=50 \
+    --randrepeat=0 --group_reporting=1 \
+    --output="$log"
+result=$?
+echo
+echo "fio exit code: $result"
+echo "Results: $log"
+echo "Test data: $testfile (remove manually to reclaim space)"
+if [ -t 0 ]; then
+    printf 'Press Enter to close... '
+    read -r answer || true
+fi
+exit "$result"
