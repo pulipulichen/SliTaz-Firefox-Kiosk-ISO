@@ -29,13 +29,40 @@ bind_root() {
 }
 install_packages() {
     local target=$1; shift
+    local package install_log package_file mirror package_path
+    local mirrors=(
+        'https://distro.ibiblio.org/slitaz/x86_64/cooking/packages'
+        'https://ftp.icm.edu.pl/packages/linux-slitaz/x86_64/cooking/packages'
+        'https://mirror.clarkson.edu/slitaz/x86_64/cooking/packages'
+    )
     printf '%s\n' 'https://mirror.slitaz.org/x86_64/cooking/packages/' > "$target/var/lib/tazpkg/mirror"
     chroot "$target" /usr/bin/tazpkg recharge
     for package in "$@"; do
-        chroot "$target" /usr/bin/tazpkg get-install "$package" --forced
+        install_log="$work/tazpkg-$package.log"
+        chroot "$target" /usr/bin/tazpkg get-install "$package" --forced 2>&1 | tee "$install_log" || true
         # Some old tazpkg releases return success after a failed download.
+        if [[ ! -d "$target/var/lib/tazpkg/installed/$package" ]]; then
+            # Recover the exact archive name selected by the repository index.
+            package_file=$(sed -n 's/.*Checksum error for "\([^"]*\.tazpkg\)".*/\1/p' "$install_log" | head -n1)
+            if [[ -n $package_file ]]; then
+                mkdir -p "$target/tmp"
+                for mirror in "${mirrors[@]}"; do
+                    package_path="$target/tmp/$package_file"
+                    echo "Trying $package_file from $mirror" >&2
+                    if curl --fail --location --silent --show-error "$mirror/$package_file" --output "$package_path"; then
+                        if chroot "$target" /usr/bin/tazpkg install "/tmp/$package_file" --forced; then
+                            rm -f "$package_path"
+                            break
+                        fi
+                    fi
+                    rm -f "$package_path"
+                done
+            fi
+        fi
         [[ -d "$target/var/lib/tazpkg/installed/$package" ]] || {
-            echo "Package installation failed: $package" >&2; exit 1;
+            echo "Package installation failed: $package" >&2
+            [[ ! -f $install_log ]] || tail -n 40 "$install_log" >&2
+            exit 1
         }
     done
 }
