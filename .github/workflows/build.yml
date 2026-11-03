@@ -16,13 +16,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install builder tools
-        run: sudo apt-get update && sudo apt-get install -y xorriso cpio xz-utils shellcheck
+        run: sudo apt-get update && sudo apt-get install -y xorriso cpio xz-utils shellcheck musl-tools
       - name: Validate scripts
         run: |
           bash -n scripts/build.sh
-          sh -n scripts/kiosk-session scripts/kiosk-network
+          sh -n scripts/kiosk-session scripts/kiosk-network scripts/fio-database-benchmark\n          bash -n scripts/build-fio.sh
           python3 -m py_compile scripts/fetch-sources.py scripts/verify-rootfs.py
-          shellcheck -S error scripts/build.sh scripts/kiosk-session scripts/kiosk-network
+          shellcheck -S error scripts/build.sh scripts/build-fio.sh scripts/kiosk-session scripts/kiosk-network scripts/fio-database-benchmark
       - name: Build ISO
         run: sudo bash scripts/build.sh
       - name: Publish ISO and corresponding sources
