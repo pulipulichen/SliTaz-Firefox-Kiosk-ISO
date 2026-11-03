@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Database I/O Test (10 min)
+Comment=Run a safe 10-minute fio 70/30 random read/write test
+Exec=/usr/local/bin/fio-database-benchmark
+Terminal=true
+Icon=utilities-terminal
+Categories=System;Utility;
