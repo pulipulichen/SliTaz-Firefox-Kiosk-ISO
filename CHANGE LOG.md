@@ -257,3 +257,10 @@ The following required packages were not found:
 - 結果：`Validate scripts` 失敗，ShellCheck SC2066 指向 `for target in "$root"; do`，因只有單一 root，應改成直接判斷 mount，這輪尚未進入 Build ISO。
 - 修改：以單次 `if findmnt ... | grep` 取代一元素 for 迴圈；不改變防止殘留掛載被刪除的目的。
 - 待驗證：下一輪 Actions 靜態檢查、SliTaz 套件安裝、SCIM table/runtime 與 ISO 封裝。
+
+### 2026-11-03 23:19 後 — SCIM 套件安裝成功，VirtIO PCI 檢查尚待確認
+
+- [Actions #41662508150](https://github.com/pulipulichen/SliTaz-Firefox-Kiosk-ISO/actions/runs/41662508150) 的 Validate scripts 成功；Build ISO 階段已成功安裝 `scim` 1.4.18、`scim-tables-base` 0.5.14.1、`scim-tables-zh` 0.5.14.1 與 `wqy-microhei`；另外解析了 `gtk+`、`wqy-bitmapfont`，共驗證 6 個直接與間接套件。
+- 新停止點：`verify-rootfs.py` 要求存在 `virtio_pci.ko`，但 Linux 核心也可能將 `CONFIG_VIRTIO_PCI=y` 直接編入核心而不產生模組檔，僅檢查 .ko 不足以判斷真實支援。
+- 修改：允許 `modules.builtin` 或核心設定檔證明 virtio_pci 為內建，且在沒有證據時輸出現有 VirtIO 檔案與配置供定位；仍不會在未知驅動狀態下冒然通過建置。
+- 待確認：SliTaz 基底是否提供此內建證據；未完成之前，不把 VirtIO 網卡支援宣稱已驗證。
