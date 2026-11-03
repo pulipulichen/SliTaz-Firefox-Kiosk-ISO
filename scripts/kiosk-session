@@ -1,0 +1,32 @@
+#!/bin/sh
+set -eu
+. /etc/kiosk.conf
+export GTK_IM_MODULE=ibus QT_IM_MODULE=ibus XMODIFIERS=@im=ibus
+export NO_AT_BRIDGE=1
+mkdir -p "$HOME/.config/ibus/rime" "$HOME/.mozilla/firefox/kiosk"
+if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
+    exec dbus-launch --exit-with-session /usr/local/bin/kiosk-session
+fi
+xset s off 2>/dev/null || true
+xset -dpms 2>/dev/null || true
+openbox &
+ibus-daemon --daemonize --xim
+# IBus 1.4 uses its Python API, rather than the newer ibus CLI/gsettings.
+python /usr/local/lib/kiosk-ibus.py >"$HOME/ibus-setup.log" 2>&1 &
+count=0
+while [ "$count" -lt "$DHCP_WAIT_SECONDS" ]; do
+    ip route | grep -q '^default ' && break
+    count=$((count + 1))
+    sleep 1
+done
+firefox_bin=$(command -v firefox || command -v firefox-official)
+if [ "$BROWSER_MODE" = kiosk ]; then
+    set -- --kiosk
+else
+    set -- --new-window
+fi
+# Restart after closing the window; configuration and browsing stay in RAM.
+while :; do
+    "$firefox_bin" --no-remote --profile "$HOME/.mozilla/firefox/kiosk" "$@" "$START_URL" || true
+    sleep 2
+done

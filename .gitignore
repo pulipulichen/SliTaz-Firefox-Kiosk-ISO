@@ -1,0 +1,5 @@
+/work/
+/dist/
+*.iso
+*.log
+__pycache__/

@@ -1,0 +1,42 @@
+{
+  "yaml-cpp": {
+    "url": "https://codeload.github.com/jbeder/yaml-cpp/tar.gz/refs/tags/yaml-cpp-0.6.3",
+    "sha256": "77ea1b90b3718aa0c324207cb29418f5bced2354c2e483a9523d98c3460af1ed"
+  },
+  "leveldb": {
+    "url": "https://codeload.github.com/google/leveldb/tar.gz/refs/tags/1.22",
+    "sha256": "55423cac9e3306f4a9502c738a001e4a339d1a38ffbee7572d4a07d5d63949b2"
+  },
+  "marisa": {
+    "url": "https://codeload.github.com/s-yata/marisa-trie/tar.gz/refs/tags/v0.2.6",
+    "sha256": "1063a27c789e75afa2ee6f1716cc6a5486631dcfcb7f4d56d6485d2462e566de"
+  },
+  "librime": {
+    "url": "https://codeload.github.com/rime/librime/tar.gz/refs/tags/1.8.5",
+    "sha256": "046f3cadae862f94b542864df77531cdbe0f9f6f08cdecc58fd02d20be609a71"
+  },
+  "ibus-rime": {
+    "url": "https://codeload.github.com/rime/ibus-rime/tar.gz/refs/tags/1.5.0",
+    "sha256": "e633bde71055b9298837c7fdd73c5694594633e08bf58b6e5cf17bac4959dacb"
+  },
+  "prelude": {
+    "url": "https://codeload.github.com/rime/rime-prelude/tar.gz/dd84abecc33f0b05469f1d744e32d2b60b3529e3",
+    "sha256": "e3480724ee509f630f0af61ac16b9ae5c1b79a5794891333236f5a69044f84e6"
+  },
+  "bopomofo": {
+    "url": "https://codeload.github.com/rime/rime-bopomofo/tar.gz/c7618f4f5728e1634417e9d02ea50d82b71956ab",
+    "sha256": "37bc156bca8bca93b001b112ee440fc498207a4f6fbcaa2d2c306cfdd4560577"
+  },
+  "terra-pinyin": {
+    "url": "https://codeload.github.com/rime/rime-terra-pinyin/tar.gz/aefaf372b25febbf4d5f9443bd284d3dd6876085",
+    "sha256": "fd034ca12c48cf1e6e3fae9a1d2187cd69347da8b78d15b8d910e97bfc58e18e"
+  },
+  "stroke": {
+    "url": "https://codeload.github.com/rime/rime-stroke/tar.gz/ea8576d1accd6fda339e96b415caadb56e2a07d1",
+    "sha256": "6ff57556a7a047514911226db9dd244f9517912573826c0d20b21456b98202be"
+  },
+  "base-iso": {
+    "url": "https://mirror.slitaz.org/x86_64/cooking/iso/slitaz-firefox-x86_64-cooking.iso",
+    "sha256": "24488ec54229810148d8abf0d405e1dc1bb4a4334ea78602cba575a3fbe25a4d"
+  }
+}

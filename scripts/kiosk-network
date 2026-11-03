@@ -1,0 +1,19 @@
+#!/bin/sh
+set -eu
+. /etc/kiosk.conf
+for module in virtio_pci virtio_net e1000 e1000e; do
+    modprobe "$module" 2>/dev/null || true
+done
+if [ "$NETWORK_INTERFACE" = auto ]; then
+    NETWORK_INTERFACE=''
+    for dev in /sys/class/net/*; do
+        [ "${dev##*/}" = lo ] && continue
+        [ -d "$dev/device" ] || continue
+        NETWORK_INTERFACE=${dev##*/}
+        break
+    done
+fi
+[ -n "$NETWORK_INTERFACE" ] || { echo 'No network interface found' >&2; exit 1; }
+# Use SliTaz's DHCP hooks for DNS, routes and lease renewal.
+sed -i "s/^INTERFACE=.*/INTERFACE=\"$NETWORK_INTERFACE\"/;s/^DHCP=.*/DHCP=\"yes\"/;s/^STATIC=.*/STATIC=\"no\"/" /etc/network.conf
+/etc/init.d/network.sh restart

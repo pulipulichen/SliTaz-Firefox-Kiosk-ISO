@@ -1,0 +1,33 @@
+name: Build Live ISO
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**.md', LICENSE]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: iso-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install builder tools
+        run: sudo apt-get update && sudo apt-get install -y xorriso cpio xz-utils shellcheck
+      - name: Validate scripts
+        run: |
+          bash -n scripts/build.sh
+          sh -n scripts/build-rime.sh scripts/kiosk-session scripts/kiosk-network
+          python3 -m py_compile scripts/fetch-sources.py scripts/verify-rootfs.py scripts/kiosk-ibus.py
+          shellcheck -S error scripts/build.sh scripts/build-rime.sh scripts/kiosk-session scripts/kiosk-network
+      - name: Build ISO
+        run: sudo bash scripts/build.sh
+      - name: Publish ISO and corresponding sources
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="build-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}"
+          gh release create "$tag" dist/* --target "$GITHUB_SHA" --title "Firefox Kiosk ISO ${GITHUB_RUN_NUMBER}" --notes-file RELEASE_NOTES.md --prerelease
