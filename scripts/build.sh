@@ -150,6 +150,8 @@ for driver in virtio_pci virtio_net; do
 done
 cleanup
 mounts=()
+# Suppress the stock DHCP auto-start so it cannot race our one bounded attempt.
+sed -i 's/^DHCP=.*/DHCP="no"/;s/^STATIC=.*/STATIC="no"/' "$root/etc/network.conf"
 install -Dm644 config/kiosk.conf "$root/etc/kiosk.conf"
 install -Dm755 scripts/kiosk-session "$root/usr/local/bin/kiosk-session"
 install -Dm755 scripts/kiosk-network "$root/usr/local/sbin/kiosk-network"
@@ -207,6 +209,13 @@ menuentry "SliTaz Firefox Desktop (DHCP / SCIM ZhuYin)" {
   initrd /boot/rootfs.gz
 }
 EOF
+# Verify networking applets exist in the finished Live environment.
+for command_name in timeout udhcpc ip; do
+    chroot "$root" /bin/sh -c "command -v $command_name >/dev/null" || {
+        echo "Missing required Live network tool: $command_name" >&2
+        exit 1
+    }
+done
 # Fail before publishing an ISO with missing input tables, drivers, or CJK fonts.
 python3 scripts/verify-rootfs.py "$root"
 table_engine=$(find "$root/usr/lib" -type f -name 'table.so' -path '*/scim-*/IMEngine/*' -print -quit)
