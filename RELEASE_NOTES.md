@@ -1,6 +1,7 @@
 Experimental SliTaz x86_64 Firefox Desktop Live ISO for Proxmox VE.
 
-- DHCP, VirtIO network, ordinary maximized Firefox at https://172.22.10.1:8006/.
+- DHCP-first VirtIO network (10-second timeout); on failure use original SliTaz static defaults, without retrying DHCP. Fallback IP/gateway/DNS are configurable in config/kiosk.conf.
+- Ordinary maximized Firefox at https://172.22.10.1:8006/ opens after network setup.
 - Firefox first-run welcome screens suppressed; desktop, LXPanel and terminal retained.
 - WenQuanYi CJK fonts and Traditional Chinese SCIM ZhuYin (Ctrl+Space).
 - Static fio 3.35 built with Alpine musl + libaio-dev, with configure/runtime
