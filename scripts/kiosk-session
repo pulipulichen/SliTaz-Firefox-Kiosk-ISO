@@ -41,12 +41,19 @@ if command -v lxpanel >/dev/null 2>&1; then
 fi
 scim -c simple -e table -f x11 --no-socket -d >"$HOME/scim-setup.log" 2>&1
 sleep 1
+# Wait for DHCP success or completion of the static fallback, not just a
+# potentially stale default route. Keep a limit so the desktop stays usable.
 count=0
-while [ "$count" -lt "$DHCP_WAIT_SECONDS" ]; do
-    ip route | grep -q '^default ' && break
+network_wait_limit=$((DHCP_WAIT_SECONDS + 15))
+while [ "$count" -lt "$network_wait_limit" ] && [ ! -f /var/run/kiosk-network.ready ]; do
     count=$((count + 1))
     sleep 1
 done
+if [ -f /var/run/kiosk-network.status ]; then
+    cat /var/run/kiosk-network.status
+else
+    echo 'Network initialization incomplete; starting Firefox anyway.' >&2
+fi
 firefox_bin=$(command -v firefox || command -v firefox-official)
 if [ "$BROWSER_MODE" = kiosk ]; then
     set -- --kiosk
