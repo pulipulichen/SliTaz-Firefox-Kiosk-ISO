@@ -284,3 +284,13 @@ The following required packages were not found:
 - 新停止點：`verify-rootfs.py` 要求存在 `virtio_pci.ko`，但 Linux 核心也可能將 `CONFIG_VIRTIO_PCI=y` 直接編入核心而不產生模組檔，僅檢查 .ko 不足以判斷真實支援。
 - 修改：允許 `modules.builtin` 或核心設定檔證明 virtio_pci 為內建，且在沒有證據時輸出現有 VirtIO 檔案與配置供定位；仍不會在未知驅動狀態下冒然通過建置。
 - 待確認：SliTaz 基底是否提供此內建證據；未完成之前，不把 VirtIO 網卡支援宣稱已驗證。
+
+
+### 2026-11-04 — DHCP 優先、10 秒逾時後切換固定 IP
+
+- 使用者決定：1a（等待 DHCP 10 秒）與 2a（Static IP 備援後不重新嘗試 DHCP）。
+- 變更前：本專案 `scripts/kiosk-network` 僅啟用 DHCP，`scripts/kiosk-session` 最多等待路由 30 秒；沒有自訂靜態設定。SliTaz 官方文件列出的原始固定 IP 預設是 `192.168.0.6/24`、Gateway/DNS `192.168.0.1`。
+- 調整：`config/kiosk.conf` 增加四項 `FALLBACK_*` 設定與 `DHCP_WAIT_SECONDS=10`；ISO 打包時關閉開機自動 DHCP，避免多個 DHCP 程序競爭；`kiosk-network` 單次執行 `timeout 10 udhcpc -n -t 3 -T 2`，DHCP 成功保留租約續租背景程序，失敗使用 SliTaz `network.sh restart` 套用固定 IP，不再嘗試 DHCP。以 `/var/run/kiosk-network.ready` 讓 Firefox 等到網路模式決定，並輸出 mode/IP/gateway 診斷檔。
+- 特別注意：備援 `192.168.0.0/24` 與預設 PVE 首頁的 `172.22.10.1` **不是同一網段**，現場如需無 DHCP 連上 PVE，應先修改備援 IP/閘道/DNS 並避免位址衝突。
+- 驗證：新增 `tests/test-kiosk-network.sh` 模擬 DHCP 成功與失敗，納入 GitHub Actions Validate scripts；正式 ISO Build 額外確認 `timeout`、`udhcpc`、`ip` 工具存在。
+- 待確認：GitHub Actions Build ISO 成果及 PVE VM 內真實 DHCP、固定 IP、Firefox 運作。單元 mock 測試不能取代 PVE 開機實測。
