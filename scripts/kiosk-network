@@ -1,6 +1,66 @@
 #!/bin/sh
 set -eu
-. /etc/kiosk.conf
+
+# Override file locations only for isolated tests; the Live ISO uses defaults.
+config_file=${KIOSK_CONFIG_FILE:-/etc/kiosk.conf}
+network_conf=${KIOSK_NETWORK_CONF_FILE:-/etc/network.conf}
+network_service=${KIOSK_NETWORK_SERVICE:-/etc/init.d/network.sh}
+runtime_dir=${KIOSK_RUNTIME_DIR:-/var/run}
+. "$config_file"
+
+mkdir -p "$runtime_dir"
+status_file="$runtime_dir/kiosk-network.status"
+ready_file="$runtime_dir/kiosk-network.ready"
+rm -f "$status_file" "$ready_file"
+
+log() {
+    printf '%s\n' "$*"
+    if [ -c /dev/console ] && [ "${KIOSK_NO_CONSOLE:-0}" != 1 ]; then
+        printf '%s\n' "$*" > /dev/console 2>/dev/null || true
+    fi
+}
+
+ipv4_address() {
+    ip -4 addr show dev "$NETWORK_INTERFACE" | awk '$1 == "inet" {print $2; exit}'
+}
+
+gateway_address() {
+    ip -4 route | awk '$1 == "default" {for (i=2; i<=NF; i++) if ($i == "via") {print $(i+1); exit}}'
+}
+
+finish() {
+    mode=$1
+    address=$(ipv4_address 2>/dev/null || true)
+    gateway=$(gateway_address 2>/dev/null || true)
+    {
+        printf 'MODE=%s\n' "$mode"
+        printf 'INTERFACE=%s\n' "$NETWORK_INTERFACE"
+        printf 'IP=%s\n' "${address:-none}"
+        printf 'GATEWAY=%s\n' "${gateway:-none}"
+    } > "$status_file.tmp"
+    mv "$status_file.tmp" "$status_file"
+    : > "$ready_file.tmp"
+    mv "$ready_file.tmp" "$ready_file"
+    log "Network mode: $mode | Interface: $NETWORK_INTERFACE | IP: ${address:-none} | Gateway: ${gateway:-none}"
+}
+
+set_network_conf() {
+    key=$1
+    value=$2
+    if grep -q "^${key}=" "$network_conf"; then
+        sed -i "s|^${key}=.*|${key}=\"${value}\"|" "$network_conf"
+    else
+        printf '%s="%s"\n' "$key" "$value" >> "$network_conf"
+    fi
+}
+
+case ${DHCP_WAIT_SECONDS:-} in
+    ''|0|*[!0-9]*) log 'Invalid DHCP_WAIT_SECONDS'; exit 1 ;;
+esac
+for value in "${FALLBACK_IP:-}" "${FALLBACK_NETMASK:-}" "${FALLBACK_GATEWAY:-}" "${FALLBACK_DNS:-}"; do
+    [ -n "$value" ] || { log "Missing static fallback configuration"; exit 1; }
+done
+
 for module in virtio_pci virtio_net e1000 e1000e; do
     modprobe "$module" 2>/dev/null || true
 done
@@ -13,7 +73,47 @@ if [ "$NETWORK_INTERFACE" = auto ]; then
         break
     done
 fi
-[ -n "$NETWORK_INTERFACE" ] || { echo 'No network interface found' >&2; exit 1; }
-# Use SliTaz's DHCP hooks for DNS, routes and lease renewal.
-sed -i "s/^INTERFACE=.*/INTERFACE=\"$NETWORK_INTERFACE\"/;s/^DHCP=.*/DHCP=\"yes\"/;s/^STATIC=.*/STATIC=\"no\"/" /etc/network.conf
-/etc/init.d/network.sh restart
+if [ -z "$NETWORK_INTERFACE" ]; then
+    NETWORK_INTERFACE=none
+    log 'No network interface found'
+    finish ERROR
+    exit 1
+fi
+
+set_network_conf INTERFACE "$NETWORK_INTERFACE"
+# Avoid a second background DHCP client from the ordinary network service.
+set_network_conf DHCP no
+set_network_conf STATIC no
+if ! ip link set dev "$NETWORK_INTERFACE" up; then
+    log "Cannot bring up $NETWORK_INTERFACE"
+    finish ERROR
+    exit 1
+fi
+
+log "Trying DHCP on $NETWORK_INTERFACE (up to ${DHCP_WAIT_SECONDS}s)..."
+# -n quits on failure, while omitting -q keeps the successful lease-renewal
+# daemon running. SliTaz's default udhcpc hook installs IP, routes and DNS.
+if timeout "$DHCP_WAIT_SECONDS" udhcpc -i "$NETWORK_INTERFACE" -n -t 3 -T 2 \
+        && [ -n "$(ipv4_address)" ]; then
+    set_network_conf DHCP yes
+    set_network_conf STATIC no
+    finish DHCP
+    exit 0
+fi
+
+log 'DHCP did not provide an address; applying the original SliTaz static network defaults.'
+set_network_conf DHCP no
+set_network_conf STATIC yes
+set_network_conf IP "$FALLBACK_IP"
+set_network_conf NETMASK "$FALLBACK_NETMASK"
+set_network_conf GATEWAY "$FALLBACK_GATEWAY"
+set_network_conf DNS_SERVER "$FALLBACK_DNS"
+if "$network_service" restart; then
+    address=$(ipv4_address 2>/dev/null || true)
+    case "$address" in
+        "$FALLBACK_IP"/*) finish STATIC; exit 0 ;;
+    esac
+fi
+log 'Static network setup failed; leaving Firefox desktop available.'
+finish ERROR
+exit 1
