@@ -1,6 +1,6 @@
 # SliTaz Firefox Desktop Live ISO
 
-供 Proxmox VE 使用的輕量 Firefox Live ISO：開機自動取得 DHCP，進入 **SliTaz 桌面**，開啟一般最大化的 Firefox 視窗。保留網址列、工作列、桌面檔案管理器、設定與終端機，並提供繁體中文注音與 fio 測試。
+供 Proxmox VE 使用的輕量 Firefox Live ISO：開機優先嘗試 DHCP（最多 10 秒），失敗就使用靜態 IP 備援，進入 **SliTaz 桌面**，開啟一般最大化的 Firefox 視窗。保留網址列、工作列、桌面檔案管理器、設定與終端機，並提供繁體中文注音與 fio 測試。
 
 > 實驗版。GitHub Actions 建置成功僅代表 ISO 產生；SliTaz/PVE 上的視窗與 SCIM 注音仍需實機驗收。
 
@@ -9,7 +9,7 @@
 - **Firefox**：開啟 `https://172.22.10.1:8006/`，新視窗**最大化**、不是 kiosk／獨占全螢幕。可以縮小、切換程式、調整網路。關閉 Firefox 後仍停留在桌面。
 - **歡迎頁**：以 Firefox Enterprise policies 的 `OverrideFirstRunPage`、`OverridePostUpdatePage` 和使用者設定取消首次啟動、更新提示、預設瀏覽器檢查。
 - **中文**：安裝 WenQuanYi Micro Hei 字型、SCIM `ZhuYin`，預設繁體中文注音（大千鍵位），`Ctrl+Space` 中英文切換。不是 RIME 或新酷音；SCIM 與 Firefox XIM 是否能正常交互仍需實機測試。
-- **桌面**：Openbox + PCManFM 桌面 + LXPanel，保留應用程式選單；網路以 DHCP 自動取得。Live 的檔案與瀏覽器個人資料在 RAM 中，重新開機消失。
+- **桌面**：Openbox + PCManFM 桌面 + LXPanel，保留應用程式選單；網路優先使用 DHCP，逾時就套用靜態 IP 備援，且不再重試 DHCP。Live 的檔案與瀏覽器個人資料在 RAM 中，重新開機消失。
 - **fio**：內建含 `libaio` 的 fio 3.35 靜態執行檔，桌面提供 **Database 4K R70 W30 (10 min)** 與 **Database 4K R50 W50 (10 min)**。兩組都直接對專用裸磁碟 `/dev/sda` 做破壞性隨機讀寫，手動執行並確認後才開始。
 
 PVE 的自簽 HTTPS 憑證警告保持正常，第一次需自行選擇接受；不會關閉憑證驗證機制。
@@ -51,8 +51,14 @@ PVE 的自簽 HTTPS 憑證警告保持正常，第一次需自行選擇接受；
 START_URL='https://172.22.10.1:8006/'
 BROWSER_MODE='normal'
 NETWORK_INTERFACE='auto'
-DHCP_WAIT_SECONDS=30
+DHCP_WAIT_SECONDS=10
+FALLBACK_IP='192.168.0.6'
+FALLBACK_NETMASK='255.255.255.0'
+FALLBACK_GATEWAY='192.168.0.1'
+FALLBACK_DNS='192.168.0.1'
 ```
+
+開機最多等待 DHCP 10 秒。DHCP 成功時採用伺服器發放的 IP、Gateway、DNS，並保留租約續租程序；失敗時改用 SliTaz 官方預設的固定 IP `192.168.0.6/24`、Gateway/DNS `192.168.0.1`，不再重試 DHCP。**注意：此備援網段不等於 PVE 網址 `172.22.10.1` 的網段**。若需在無 DHCP 的 172.22.10.0 網段存取 PVE，請先依現場狀況修改 `FALLBACK_*` 設定，避免 IP 衝突。本專案修改前並沒有明確設定固定 IP，只有 DHCP；上述預設值沿用 SliTaz 原始設定而非假設已有的 PVE 靜態設定。網路狀態記錄在 `/var/run/kiosk-network.status`、`/var/log/kiosk-network.log`；Firefox 會等待成功取得 DHCP 或備援設定完成（另有逾時保護）。
 
 `normal` 讓 Firefox 最大化但保留桌面；若自行改為 `kiosk` 才會使用 Firefox 的 `--kiosk` 模式。Firefox user.js 複製到 Live 使用者的實際 Profile，並依照 `START_URL` 設定首頁，避免 `/etc/skel` 對已存在使用者無效的問題。
 
@@ -68,7 +74,7 @@ sudo bash scripts/build.sh
 
 ## 驗收
 
-1. ISO 開機取得 VirtIO 網卡 DHCP，LXPanel/桌面圖示存在，Firefox 直接以一般最大化視窗開啟指定 PVE HTTPS 網址，不出現 Firefox 歡迎頁。
+1. 分別測試有 DHCP 和沒有 DHCP 的 VirtIO 網路：前者取得 DHCP，後者最多約 10 秒後改用備援 IP 且不再嘗試 DHCP；檢查 `/var/run/kiosk-network.status`。LXPanel/桌面圖示存在，Firefox 直接以一般最大化視窗開啟指定 PVE HTTPS 網址，不出現 Firefox 歡迎頁。
 2. 能縮小及關閉 Firefox，桌面仍可操作；能進入網路設定、終端機與其他應用。
 3. 中文網頁正常顯示，`Ctrl+Space` 切到「Chinese (traditional) — ZhuYin」，使用大千鍵盤輸入「中文測試」。
 4. `fio --version` 顯示 3.35，`fio --enghelp=libaio` 有效；確認專用 `/dev/sda` 無掛載與重要資料，兩個桌面腳本均能要求確認後完成 60 秒暖機 + 600 秒測試，結果保留在 `/tmp/fio-results/`。
