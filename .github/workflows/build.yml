@@ -23,6 +23,8 @@ jobs:
           for script in scripts/kiosk-session scripts/kiosk-network scripts/fio-db-runner scripts/fio-db-r70-w30.sh scripts/fio-db-r50-w50.sh; do
             sh -n "$script"
           done
+          sh -n tests/test-kiosk-network.sh
+          sh tests/test-kiosk-network.sh
           bash -n scripts/build-fio.sh
           python3 -m py_compile scripts/fetch-sources.py scripts/verify-rootfs.py
           shellcheck -S error scripts/build.sh scripts/build-fio.sh scripts/kiosk-session scripts/kiosk-network scripts/fio-db-runner scripts/fio-db-r70-w30.sh scripts/fio-db-r50-w50.sh
